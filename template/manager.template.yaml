@@ -1,0 +1,36 @@
+# Current server info used for server.
+server:
+  # GRPC server configure.
+  grpc:
+    advertiseIP: __IP__
+    port:
+      start: 65003
+      end: 65003
+  # REST server configure
+  rest:
+    addr: :8080
+  logDir: ''
+  cacheDir: ''
+  pluginDir: ''
+
+# Auth configuration.
+auth:
+  jwt:
+    realm: 'Dragonfly'
+    key: 'ZHJhZ29uZmx5Cg=='
+    timeout: 48h
+    maxRefresh: 48h
+
+# Database info used for server.
+database:
+  mysql:
+    user: dragonfly
+    password: dragonfly
+    host: __IP__
+    port: 3306
+    dbname: manager
+    migrate: true
+  redis:
+    addrs:
+      - "__IP__:6379"
+    masterName: ''
