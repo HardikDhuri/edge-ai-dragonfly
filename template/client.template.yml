@@ -1,0 +1,48 @@
+console: true
+
+log:
+  level: info
+
+host:
+  idc: ''
+  location: ''
+  ip: __IP__
+
+server:
+  pluginDir: /var/lib/dragonfly/plugins/dfdaemon/
+  cacheDir: /var/cache/dragonfly/dfdaemon/
+
+download:
+  protocol: tcp
+  server:
+    socketPath: /var/run/dragonfly/dfdaemon.sock
+  bandwidthLimit: 50GB
+  backToSourceBandwidthLimit: 50GB
+  pieceTimeout: 40s
+  concurrentPieceCount: 10
+
+upload:
+  server:
+    port: 4000
+  disableShared: false
+  bandwidthLimit: 50GB
+
+manager:
+  addr: http://__IP__:65003
+
+scheduler:
+  announceInterval: 30s
+  scheduleTimeout: 30s
+  maxScheduleCount: 5
+  enableBackToSource: true
+
+# Proxy config — TUI app hits localhost:4001, Dragonfly P2P-accelerates it
+proxy:
+  server:
+    port: 4001
+  registryMirror:
+    url: http://__IP__:8888   # Points to our model-server
+    insecure: true
+  rules:
+    - regx: ".*"
+      useHTTPS: false

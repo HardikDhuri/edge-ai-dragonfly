@@ -1,0 +1,24 @@
+server:
+  advertiseIP: __IP__
+  port: 8002
+  logDir: ''
+  cacheDir: ''
+  pluginDir: ''
+  dataDir: ''
+
+scheduler:
+  algorithm: default
+  backToSourceCount: 200
+  retryBackToSourceLimit: 3
+  retryLimit: 5
+  retryInterval: 400ms
+  gc:
+    pieceDownloadTimeout: 30m
+    peerGCInterval: 10s
+    peerTTL: 24h
+    taskGCInterval: 30m
+    hostGCInterval: 5m
+
+manager:
+  addrs:
+    - __IP__:65003

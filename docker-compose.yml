@@ -1,0 +1,117 @@
+services:
+
+  # ── Infrastructure ─────────────────────────────────────
+  redis:
+    image: redis:6-alpine
+    container_name: dragonfly-redis
+    command: --requirepass dragonfly
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "dragonfly", "ping"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+    ports:
+      - 6379:6379
+
+  mysql:
+    image: mariadb:10.6
+    container_name: dragonfly-mysql
+    environment:
+      - MARIADB_USER=dragonfly
+      - MARIADB_PASSWORD=dragonfly
+      - MARIADB_DATABASE=manager
+      - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=yes
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+    ports:
+      - 3306:3306
+
+  # ── Dragonfly Control Plane ─────────────────────────────
+  manager:
+    image: dragonflyoss/manager:latest
+    container_name: manager
+    depends_on:
+      - redis
+      - mysql
+    restart: always
+    volumes:
+      - ./log/manager:/var/log/dragonfly
+      - ./config/manager.yaml:/etc/dragonfly/manager.yaml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/grpc_health_probe -addr=:65003 || exit 1"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+    ports:
+      - 65003:65003
+      - 8080:8080    # Manager Web UI
+
+  scheduler:
+    image: dragonflyoss/scheduler:latest
+    container_name: scheduler
+    depends_on:
+      - manager
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/grpc_health_probe -addr=:8002 || exit 1"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+    volumes:
+      - ./log/scheduler:/var/log/dragonfly
+      - ./config/scheduler.yaml:/etc/dragonfly/scheduler.yaml:ro
+    ports:
+      - 8002:8002
+
+  # ── Seed Client (super-node, pulls from origin) ─────────
+  seed-client:
+    image: dragonflyoss/client:latest
+    container_name: seed-client
+    depends_on:
+      - manager
+      - scheduler
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/grpc_health_probe -addr=unix:///var/run/dragonfly/dfdaemon.sock || exit 1"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+    volumes:
+      - ./log/seed-client:/var/log/dragonfly
+      - ./config/seed-client.yaml:/etc/dragonfly/dfdaemon.yaml:ro
+    ports:
+      - 4010:4010
+
+  # ── Edge Client (simulated edge node) ───────────────────
+  client:
+    image: dragonflyoss/client:latest
+    container_name: client
+    depends_on:
+      - manager
+      - scheduler
+      - seed-client
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/grpc_health_probe -addr=unix:///var/run/dragonfly/dfdaemon.sock || exit 1"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+    volumes:
+      - ./log/client:/var/log/dragonfly
+      - ./config/client.yaml:/etc/dragonfly/dfdaemon.yaml:ro
+    ports:
+      - 4000:4000
+      - 4001:4001   # Proxy port — used by TUI app
+      - 4002:4002
+
+  # ── Model File HTTP Server ───────────────────────────────
+  model-server:
+    build: ./model-server
+    container_name: model-server
+    ports:
+      - 8888:80
+    volumes:
+      - ./models:/usr/share/nginx/html/models:ro
